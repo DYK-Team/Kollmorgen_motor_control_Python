@@ -1,0 +1,148 @@
+(*
+DISCLAIMER:
+All programs in this release (application demos, Kollmorgen UDFBs, etc.) are provided
+"AS IS, WHERE IS", WITHOUT ANY WARRANTIES, EXPRESS OR IMPLIED.
+There may be technical or editorial omissions in the programs and their specifications. 
+These programs are provided solely for user application development and user assumes 
+all responsibility for their use. Programs and their content are subject to change without notice.
+*)
+
+/////MOTION INITIALIZATION///////////////////////////////////////////////
+
+FirstCycle := TRUE;
+//TestDrive := FALSE;
+
+On FirstCycle DO //Initialize the motion engine
+   MLMotionInit( 1000);
+END_DO;
+
+MotionEngineStatus := MLMotionStatus();//Check the current status of the motion engine
+
+ON MotionEngineStatus = MLSTATUS_INITIALISED DO//Once motion engine is initialized, create CAM profiles and defined Axis, then start the motion engine
+   Profiles( MLPR_CREATE_PROFILES );
+   PLCopen( 0 );
+   MLMotionStart();
+END_DO;
+
+IF MotionEngineStatus = MLSTATUS_RUNNING THEN
+   bMotionEngineStarted := TRUE;
+ELSE
+   bMotionEngineStarted := FALSE;
+END_IF;
+
+ON bMotionEngineStarted DO //Assign numbers to each Axis in the program
+   Axis1.AXIS_NUM := 1;
+   Axis2.AXIS_NUM := 2;
+END_DO;
+
+
+
+///// AXIS POSITION AND STATUS /////////////////////////////////////
+
+
+
+IF bMotionEngineStarted THEN //When motion engine is running, monitor Axis positions, Axis Status, and the Feedrate command 
+   Inst_MC_ReadActPos( TRUE, Axis1 );
+   Inst_MC_ReadActPos1( TRUE, Axis2 );
+   ActPos1 := Inst_MC_ReadActPos.Position;
+   ActPos2 := Inst_MC_ReadActPos1.Position;
+
+   Inst_MC_ReadStatus( TRUE, Axis1 );
+   Stat1Enabled := Not Inst_MC_ReadStatus.Disabled;
+   
+   Inst_MC_ReadStatus1( TRUE, Axis2 );
+   Stat2Enabled := Not Inst_MC_ReadStatus1.Disabled;
+END_IF;
+
+IF Stat1Enabled and (Not Inst_MC_ReadStatus.ErrorStop) and Stat2Enabled and (Not Inst_MC_ReadStatus1.ErrorStop)THEN
+   Ready := TRUE;//If drives are enabled and without errors, turn on ready light
+ELSE
+   Ready := FALSE;//Ready light Off if either drive disabled or has an error
+END_IF;
+
+
+
+///// AXIS ENABLE/Disable  /////////////////////////////////////////////////////// 
+
+
+IF OpenButton THEN //Enable drives when button pressed
+   Inst_MC_Power( FALSE, Axis1, FALSE, FALSE, 0 );
+   Inst_MC_Power1( FALSE, Axis2, FALSE, FALSE, 0 );
+ELSIF CloseButton THEN //Disable drives when button pressed
+   Inst_MC_Power( TRUE, Axis1, TRUE, TRUE, 0 );
+   Inst_MC_Power1( TRUE, Axis2, TRUE, TRUE, 0 );
+END_IF;
+
+
+////// AXIS HOMING  //////////////////////////////////////////////////////////
+
+
+//Set Home or Zero position
+Inst_MC_SetPos( Axis1SetZero, Axis1, 0, 0 );
+Inst_MC_SetPos1( Axis2SetZero, Axis2, 0, 0 );
+
+// Multi-Axis Geared or CAM Motion  /////////////////////////////////////////////////////////////
+
+//Start velocity move on master axis
+Inst_MC_MoveContVel( StartMove, Axis1, MasterVelocity, Axis1Accel, Axis1Accel, 0, TRUE, 0 );
+Inst_MC_Halt( NOT StartMove, Axis1, 100, 0, 0 );
+
+//MultiAxis Geared move. Set 1:1 gear ratio
+Inst_MC_GearIn( Engage_Gearing, Axis1, Axis2, 1, 1, Axis2Accel, Axis2Accel, 0, 0 );
+GearingEngaged := Inst_MC_GearIn.Active;
+
+// Dima: It was the ratio 2:1 above and "Axis1, Axis2, 2, 1"
+
+   
+//MultiAxis Cam Move
+Inst_MC_CamTblSelect( bMotionEngineStarted, 'CamProfile1', TRUE, FALSE, FALSE );
+
+Inst_MC_CamIn( Engage_Camming, Axis1, Axis2, 0, 0, 360, 360, 0, Inst_MC_CamTblSelect.CamTableID, 0 );
+CammingEngaged:= Inst_MC_CamIn.Active;
+
+
+//Disengage multi-axis moves 
+//Additionally from KVB panel - stop motion when switching from Advanced Motion to Basic Operation Motion
+Inst_MC_Halt1( EnterBasicOperation, Axis1, 5000, 0, 0 );
+Inst_MC_Halt2( StopEngagement OR EnterBasicOperation, Axis2, 5000, 0, 0 );
+
+
+///// Single Axis independent moves  /////////////////////////////////////////////////////////////
+
+
+//Single Axis Jog commands
+Inst_MCFB_Jog( Axis1, Axis1JogPlus, Axis1JogMinus, Axis1Vel, Axis1Accel );
+
+Inst_MCFB_Jog1( Axis2, Axis2JogPlus, Axis2JogMinus, Axis2Vel, Axis2Accel );
+
+
+//Single Axis Relative and Absolute moves
+Inst_MC_MoveRelative( Axis1Relative, Axis1, Axis1RelDistance, Axis1Vel, Axis1Accel, Axis1Accel, 0, 0 );
+Inst_MC_MoveRelative1( Axis2Relative, Axis2, Axis2RelDistance, Axis2Vel, Axis2Accel, Axis2Accel, 0, 0 );
+
+Inst_MC_MoveAbsolute( Axis1Abs, Axis1, Axis1AbsPos, Axis1Vel, Axis1Accel, Axis1Accel, 0, 0, 0 );
+Inst_MC_MoveAbsolute1( Axis2Abs, Axis2, Axis2AbsPos, Axis2Vel, Axis2Accel, Axis2Accel, 0, 0, 0 );
+
+//Move via API 1st axis motor
+IF TestDrive1 THEN //Move when button pressed
+   Inst_MC_MoveRelative( True, Axis1, Axis1RelDistance, Axis1Vel, Axis1Accel, Axis1Accel, 0, 0 );
+   TestDrive1 := FALSE;
+   //Inst_MC_MoveRelative( True, Axis1, Axis1RelDistance, 200, 1000, 1000, 0, 0 );
+   //Inst_MC_MoveRelative1( Axis2Relative, Axis2, Axis2RelDistance, Axis2Vel, Axis2Accel, Axis2Accel, 0, 0 );
+END_IF;
+
+//Move via API 2nd axis motor
+IF TestDrive2 THEN 
+   Inst_MC_MoveRelative( True, Axis2, Axis2RelDistance, Axis2Vel, Axis2Accel, Axis2Accel, 0, 0 );
+   TestDrive2 := FALSE;
+   //Inst_MC_MoveRelative( True, Axis1, Axis1RelDistance, 200, 1000, 1000, 0, 0 );
+   //Inst_MC_MoveRelative1( Axis2Relative, Axis2, Axis2RelDistance, Axis2Vel, Axis2Accel, Axis2Accel, 0, 0 );
+END_IF;
+
+
+
+
+
+
+
+
