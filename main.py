@@ -1,18 +1,31 @@
+# Warning: May need to be started twice!
 import requests
 # import os
 import time
 import subprocess
+
 p = subprocess.Popen(['run_controller.cmd'])
+# Testing launch error catching
+# if p.poll() is not None:
+#     print ("failed to start!")
+#     exit(1)
+# else:
+#     p = subprocess.Popen(['run_controller.cmd'])
+
 time.sleep(5)
 
 def Axis1SetZero():
     payload = {'Axis1SetZero': False}
     SetZero1 = requests.put('http://192.168.0.105/kas/plcvariables?format=text',data=payload)
+    payload = {'Axis1SetZero': True}
+    SetZero1 = requests.put('http://192.168.0.105/kas/plcvariables?format=text', data=payload)
     return SetZero1.status_code
 
 def Axis2SetZero():
     payload = {'Axis2SetZero': False}
     SetZero2 = requests.put('http://192.168.0.105/kas/plcvariables?format=text',data=payload)
+    payload = {'Axis2SetZero': True}
+    SetZero2 = requests.put('http://192.168.0.105/kas/plcvariables?format=text', data=payload)
     return SetZero2.status_code
 
 def ReadActualPosition12():
@@ -134,21 +147,18 @@ def positionWaiter(timeout, threshold, rel_motion, prev_angle):
 # Motor tests
 EnableMotors()
 time.sleep(2)
-#print(Axis1SetZero())
-#print(Axis2SetZero())
-#time.sleep(1)
-#target = 0.0
-#positionWaiter(0.1, 0.5, target, achieved)
-#target = achieved
+Axis1SetZero()
+Axis2SetZero()
+time.sleep(2)
 
 or_reading = ReadActualPosition12()
-print(or_reading)
+print("Initial position is: ", or_reading)
 prev_angle = float((or_reading).split(",")[0])
 print(prev_angle)
-
-angle1 = -360.0  # dgrees
+# Go to actual angle required
+angle1 = 360.0  # dgrees
 velocity = 150.0  # degree/second
-acceleration = 900.0  # degree/second^2
+acceleration = 600.0  # degree/second^2
 #print(Axis2Parameters(angle2, velocity, acceleration))
 print(Axis1Parameters(angle1, velocity, acceleration))
 
@@ -157,3 +167,4 @@ print(runMotors(1))
 #time.sleep(5)
 positionWaiter(0.1, 0.5, angle1, prev_angle)
 
+DisableMotors()
