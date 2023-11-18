@@ -1,4 +1,4 @@
-# kollmorgen-motor-control
+kollmorgen-motor-control
 Reproducing PLC commands in Kollmorgen PCMM & AKD with Python. 
 All basic functionality is now available such as: 
  - Checking current status (position, readiness etc)
