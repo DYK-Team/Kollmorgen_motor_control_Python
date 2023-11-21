@@ -1,5 +1,5 @@
 # Kollmorgen motor control via Python
-Reproducing PLC commands in Kollmorgen PCMM & AKD with Python. 
+Reproducing PLC commands in Kollmorgen PCMM & AKD with Python (see the main.py module). 
 All basic functionality is now available such as: 
  - Checking current status (position, readiness etc)
  - Setting position, speed and acceleration
