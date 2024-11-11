@@ -6,4 +6,4 @@ All basic functionality is now available such as:
  - Driving the motors 
  - etc.
 
-The work was conducted within the scope of a major project aimed at establishing a microwave laboratory at Zhajiang University, Hangzhou, China. Alongside the microwave aspect, the measurement setup incorporates mobile carts fitted with antenna pillars. These carts were linked to belt actuators powered by Kollmorgen servo-motors. The measurement automation was implemented through Python software. Further details regarding this project will be provided in a separate repository.
+The work was conducted within the scope of a major project aimed at establishing a microwave laboratory at Zhejiang University, Hangzhou, China. Alongside the microwave aspect, the measurement setup incorporates mobile carts fitted with antenna pillars. These carts were linked to belt actuators powered by Kollmorgen servo-motors. The measurement automation was implemented through Python software. Further details regarding this project will be provided in a separate repository.
